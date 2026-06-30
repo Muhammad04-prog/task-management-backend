@@ -11,7 +11,7 @@
 
 import Fastify, { type FastifyInstance } from 'fastify';
 import type { LoggerOptions } from 'pino';
-import { config, isDev } from './config/index.js';
+import { config, isProd, isTest } from './config/index.js';
 import errorHandlerPlugin from './plugins/error-handler.js';
 import swaggerPlugin from './plugins/swagger.js';
 import prismaPlugin from './plugins/prisma.js';
@@ -39,19 +39,22 @@ export interface BuildAppOptions {
  * every log line).
  */
 function defaultLogger(): LoggerOptions | boolean {
-  const level = config.LOG_LEVEL ?? (isDev ? 'debug' : 'info');
+  // Default to 'info' in production/test, 'debug' in development.
+  const level = config.LOG_LEVEL ?? (isProd ? 'info' : 'debug');
 
-  if (isDev) {
-    return {
-      level,
-      transport: {
-        target: 'pino-pretty',
-        options: { translateTime: 'HH:MM:ss Z', ignore: 'pid,hostname' },
-      },
-    };
+  // Disable pretty printing in production and test environments.
+  if (isProd || isTest) {
+    return { level };
   }
 
-  return { level };
+  // Use pino-pretty for development.
+  return {
+    level,
+    transport: {
+      target: 'pino-pretty',
+      options: { translateTime: 'HH:MM:ss Z', ignore: 'pid,hostname' },
+    },
+  };
 }
 
 /**
